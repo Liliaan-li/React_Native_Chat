@@ -4,7 +4,7 @@ import {useRouter} from "expo-router";
 import {useMutation} from "convex/react";
 import {api} from "@/convex/_generated/api";
 import Colors from "@/colors/Colors";
-import Button from "@/shared/Button";
+import Button from "@/app/shared/Button";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const CreatePage = () => {

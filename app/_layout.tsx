@@ -4,6 +4,8 @@ import {TouchableOpacity} from "react-native";
 import {Ionicons} from "@expo/vector-icons";
 import Colors from "@/colors/Colors";
 import React from "react";
+import {Provider} from "react-redux";
+import {store} from "@/app/core/store";
 
 const convex = new ConvexReactClient(process.env.EXPO_PUBLIC_CONVEX_URL!, {
     unsavedChangesWarning: false,
@@ -11,30 +13,39 @@ const convex = new ConvexReactClient(process.env.EXPO_PUBLIC_CONVEX_URL!, {
 export default function RootLayoutNav() {
     return (
         <ConvexProvider client={convex}>
-                <Stack screenOptions={{
-                    headerStyle: {
-                        backgroundColor: Colors.yellow
-                    },
-                    headerTintColor: Colors.white,
-                }}>
+            <Provider store={store}>
+                <Stack>
                     <Stack.Screen name={"index"} options={{
                         headerTitle: "My chats",
+                        headerStyle: {
+                            backgroundColor: Colors.yellow,
+                        },
+                        headerTintColor: Colors.white,
                         headerRight: () => (
-                            <Link href={"/(modal)/create"} asChild>
+                            <Link href={"/static/(modal)/create"} asChild>
                                 <TouchableOpacity>
                                     <Ionicons name={"add"} size={32} color={Colors.white}/>
                                 </TouchableOpacity>
                             </Link>
                         )
                     }}/>
-                    <Stack.Screen name={"(modal)/create"} options={{
+                    <Stack.Screen name={"static/(modal)/create"} options={{
                         headerTitle: "Start a chat",
+                        headerStyle: {
+                            backgroundColor: Colors.yellow,
+                        },
+                        headerTintColor: Colors.white,
                         presentation: "modal",
                     }}/>
-                    <Stack.Screen name={"(chat)/[chatId]"} options={{
+                    <Stack.Screen name={"static/(chat)/[chatId]"} options={{
+                        headerStyle: {
+                            backgroundColor: Colors.yellow,
+                        },
+                        headerTintColor: Colors.white,
                         headerTitle: "",
                     }}/>
                 </Stack>
+            </Provider>
         </ConvexProvider>
     )
 }

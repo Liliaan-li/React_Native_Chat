@@ -14,32 +14,39 @@ import {useConvex, useMutation, useQuery} from "convex/react";
 import {api} from "@/convex/_generated/api";
 import {Doc, Id} from "@/convex/_generated/dataModel";
 import Colors from "@/colors/Colors";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import {Ionicons} from "@expo/vector-icons";
 import DialogTitle from "react-native-dialog/lib/Title";
 import DialogDescription from "react-native-dialog/lib/Description";
 import DialogButton from "react-native-dialog/lib/Button";
 import DialogContainer from "react-native-dialog/lib/Container";
 import * as ImagePicker from 'expo-image-picker';
+import {getUserThunk} from "@/app/core/authReducer";
+import {useAppDispatch, useAppSelector} from "@/app/core/store";
 
 const Page = () => {
-        const [userName, setUserName] = useState<string | null>(null);
         const [newMessage, setNewMessage] = useState<string>('')
         const [selectedImage, setSelectedImage] = useState<string | null>(null)
         const [uploading, setUploading] = useState<boolean>(false)
+        const [visible, setVisible] = useState(false)
+        const [visibleError, setVisibleError] = useState(false)
 
         const convex = useConvex();
         const navigation = useNavigation()
         const router = useRouter();
         const {chatId} = useLocalSearchParams()
         const listRef = useRef<FlatList>(null)
+        const dispatch = useAppDispatch()
 
         const deleteGroup = useMutation(api.groups.deleteChat)
         const deleteMessages = useMutation(api.messages.deleteMessages)
         const addMessage = useMutation(api.messages.sendMessage)
         const messages = useQuery(api.messages.get, {chatId: chatId as Id<'groups'>}) || []
-        const [visible, setVisible] = useState(false)
 
+        const user = useAppSelector(state => state.user.user)
+
+        useEffect(() => {
+            dispatch(getUserThunk())
+        }, []);
 
         useEffect(() => {
             const loadGroup = async () => {
@@ -55,16 +62,6 @@ const Page = () => {
             loadGroup();
         }, [chatId]);
 
-
-        useEffect(() => {
-            const loadUser = async () => {
-                const user = await AsyncStorage.getItem('user');
-                setUserName(user);
-            };
-
-            loadUser();
-        }, []);
-
         useEffect(() => {
             setTimeout(() => {
                 listRef.current?.scrollToEnd({animated: true})
@@ -75,22 +72,23 @@ const Page = () => {
         const onDeleteGroup = () => {
             const loadGroup = async () => {
                 const groupInfo = await convex.query(api.groups.getOneGroup, {id: chatId as Id<'groups'>});
-                console.log(groupInfo!.userName === userName)
-                if (groupInfo!.userName === userName) {
+                if (groupInfo!.userName === user) {
                     await deleteMessages({chatId: chatId as Id<'groups'>})
                     await deleteGroup({id: chatId as Id<'groups'>})
                     setVisible(false)
                     router.back()
+                } else {
+                    setVisible(false)
+                    setVisibleError(true)
                 }
             }
             loadGroup()
         }
-
         const handleSendMessage = async () => {
             Keyboard.dismiss()
 
             if (selectedImage) {
-                const url = `${process.env.EXPO_PUBLIC_CONVEX_SITE}/sendImage?user=${encodeURIComponent(userName!)}&group_id=${chatId}&content=${encodeURIComponent(newMessage)}`;
+                const url = `${process.env.EXPO_PUBLIC_CONVEX_SITE}/sendImage?user=${encodeURIComponent(user!)}&group_id=${chatId}&content=${encodeURIComponent(newMessage)}`;
                 setUploading(true);
 
                 // Convert URI to blob
@@ -112,7 +110,7 @@ const Page = () => {
                 await addMessage({
                     group_id: chatId as Id<'groups'>,
                     content: newMessage,
-                    user: userName || "Anonymous"
+                    user: user || "Anonymous"
                 })
             }
 
@@ -132,7 +130,7 @@ const Page = () => {
         }
 
         const renderMessage: ListRenderItem<Doc<'messages'>> = ({item}) => {
-            const isUserMessage = item.user === userName;
+            const isUserMessage = item.user === user;
             return (
                 <View
                     style={[styles.messageContainer, isUserMessage ? styles.userMessageContainer : styles.otherMessageContainer]}>
@@ -148,7 +146,6 @@ const Page = () => {
                 </View>
             );
         }
-
 
         return (
             <SafeAreaView style={{flex: 1, backgroundColor: Colors.white}}>
@@ -179,6 +176,11 @@ const Page = () => {
                         <DialogDescription>Are you sure you want to delete ?</DialogDescription>
                         <DialogButton label={"Cancel"} onPress={() => setVisible(false)}/>
                         <DialogButton label={"Delete"} onPress={onDeleteGroup}/>
+                    </DialogContainer>
+                    <DialogContainer visible={visibleError}>
+                        <DialogTitle>Error</DialogTitle>
+                        <DialogDescription>You can't delete this chat</DialogDescription>
+                        <DialogButton label={"Ok"} onPress={() => setVisibleError(false)}/>
                     </DialogContainer>
                 </KeyboardAvoidingView>
 
